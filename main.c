@@ -22,6 +22,40 @@ struct clone_args {
 	int pipe[2];
 };
 
+// move the eth0 into the childs namespace
+// 
+// this still needs the following commands to get a routable interface
+//
+// ip link set dev lo up
+// ip link set dev eth0 down
+// ip addr add 172.17.0.14/16 dev eth0
+// ip link set dev eth0 up
+// ip route add default via 172.17.42.1
+int move_eth0(pid_t pid)
+{
+	char spid[24] = { 0x0 };
+	sprintf(spid, "%d", pid);
+
+	int fpid = fork();
+	if (fpid < 0) {
+		fprintf(stderr, "ork %s\n", strerror(errno));
+		return 1;
+	}
+
+	if (fpid == 0) {
+		execl("/bin/network", "network", spid, NULL);
+		fprintf(stderr, "execl %s\n", strerror(errno));
+		exit(1);
+	}
+
+	if (waitpid(fpid, NULL, 0) == -1) {
+		fprintf(stderr, "waitpid %s\n", strerror(errno));
+		return 1;
+	}
+
+	return 0;
+}
+
 int change_user(int id)
 {
 	if (setuid(id) != 0) {
@@ -88,7 +122,7 @@ int main(int argc, char **argv)
 	struct clone_args args;
 	pid_t pid;
 	// inner user | outer user | length
-	char *value = "0 1000 1";
+	char *value = "0 1000 65000";
 	args.argv = &argv[1];
 
 	if (pipe(args.pipe) == -1) {
@@ -120,6 +154,9 @@ int main(int argc, char **argv)
 	if (write_map(id_path, value) != 0) {
 		fprintf(stderr, "failed to write id map to %s %s\n", id_path,
 			strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+	if (move_eth0(pid) != 0) {
 		exit(EXIT_FAILURE);
 	}
 	// signal to the child process that we are finished writing the uid:gid mapping
