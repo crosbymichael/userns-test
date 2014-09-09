@@ -135,7 +135,8 @@ int main(int argc, char **argv)
 	// TODO: getting an mknod error
 	pid =
 	    clone(child_exec, child_stack + STACKSIZE,
-		  CLONE_NEWUSER | CLONE_NEWNET | CLONE_NEWNS | SIGCHLD, &args);
+		  CLONE_NEWPID | CLONE_NEWUSER | CLONE_NEWNET | CLONE_NEWNS |
+		  SIGCHLD, &args);
 
 	if (pid < 0) {
 		fprintf(stderr, "clone into new user namespace %s\n",
