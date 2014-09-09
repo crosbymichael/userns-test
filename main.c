@@ -130,10 +130,12 @@ int main(int argc, char **argv)
 			strerror(errno));
 		exit(EXIT_FAILURE);
 	}
-
+	// we need NEWNET so that we can create and manage our container's network interfaces
+	// NETNS so that we can setup conatiner mounts and such 
+	// TODO: getting an mknod error
 	pid =
 	    clone(child_exec, child_stack + STACKSIZE,
-		  CLONE_NEWUSER | CLONE_NEWNET | SIGCHLD, &args);
+		  CLONE_NEWUSER | CLONE_NEWNET | CLONE_NEWNS | SIGCHLD, &args);
 
 	if (pid < 0) {
 		fprintf(stderr, "clone into new user namespace %s\n",
